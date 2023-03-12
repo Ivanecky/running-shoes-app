@@ -21,7 +21,7 @@ def getReviewLinks(base_url):
     review_links = [link.get('href') for link in base_soup.find_all('a')]
 
     # Filter to only those that are reviews
-    review_links = [link for link in review_links if "https://www.runningshoesguru.com/reviews" in link]
+    review_links = [link for link in review_links if "review" in link and "https" in link]
 
     # Return links
     return(review_links)
@@ -41,12 +41,31 @@ def getPageObj(url):
     score = shoe_soup.select('div.panel')[0].text.replace('\n', '')
     # Remove "expert score" from score
     score = re.sub("expert score", "", score).strip()
-    # Get body text
-    body_txt = shoe_soup.body.text
+    # Get body text (three parts)
+    # Get verdict
+    try:
+        body_txt_verdict = shoe_soup.select('col-lg-11')[0].text.replace('\n', '').strip()
+    except:
+        print(f"No verdict was found for {url}")
+        body_txt_verdict = ""
+    # Get main review
+    try:
+        body_txt_main = shoe_soup.find("div", {"class": "review-section"}).text.replace('\n', '').strip()
+    except:
+        try:
+            body_txt_main = shoe_soup.find("div", {"id": "review-body-content"}.text.replace('\n', '').strip())
+        except:
+            print(f"No body text was found for {url}")
+            body_txt_main = ""
+    # Get scores
+    try:
+        body_txt_scores = shoe_soup.find("div", {"class": "panel panel-inverted"}).text.replace('\n', '').strip()
+    except:
+        print(f"No score was found for {url}")
+        body_txt_scores = ""
 
-    # Remove new line char and double whitespace
-    body_txt = body_txt.replace('\n', ' ')
-    body_txt = re.sub(r'\s+', ' ', body_txt).strip()
+    # Combine three string components into one big string
+    body_txt = body_txt_main + body_txt_scores + body_txt_verdict
 
     # Create page object
     # Generate UUID
