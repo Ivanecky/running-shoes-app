@@ -7,7 +7,6 @@ import re
 import pymongo
 import uuid
 
-# Function to get links from page
 def getLinks(base_url):
 
     # Get HTML
@@ -28,8 +27,7 @@ def getLinks(base_url):
     # Return
     return(review_links)
 
-# Function to get single page object
-def getPageObj(page_url):
+def getShoeReviews(page_url):
     # Get HTML
     page_html = requests.get(page_url).content
 
@@ -38,17 +36,16 @@ def getPageObj(page_url):
 
     # Get single elements
     # Title
-    page_title = page_soup.select('h3.post-title')[0].text.replace('\n', '')
-    # Date
-    page_dt = page_soup.select('h2.date-header')[0].text.replace('\n', '')
+    page_title = page_soup.find('h1', {'class': 'h2 desc_top-head-title'}).text.replace('\n', '')
 
     # Get remaining text within the body of the review
-    body_txt = page_soup.body.text
+    body_txt = page_soup.find('div', {'class': 'display-review-container'}).text.replace('\n', '')
 
     # Remove new line char and double whitespace
-    body_txt = body_txt.replace('\n', ' ')
     body_txt = re.sub(r'\s+', ' ', body_txt).strip()
 
+
+    # Create page object
     # Generate UUID
     temp_id = str(uuid.uuid4())
 
@@ -56,16 +53,14 @@ def getPageObj(page_url):
     page_obj = {
         'id': temp_id,
         'name': page_title,
-        'review_d': page_dt,
         'review_txt': body_txt
     }
 
-    # Return
+    # Return the object
     return(page_obj)
 
-# Main program
 def main():
-    # Read YAML file for MongoDB pwd
+     # Read YAML file for MongoDB pwd
     # Import cred from yaml
     with open("/Users/samivanecky/git/running-shoe-app/mongo_creds.yaml") as f:
         creds = yaml.safe_load(f)
@@ -78,23 +73,42 @@ def main():
     # Connvect to database
     db = client["running-shoes"]
     # Connect to collection
-    collection = db["roadtrailrun"]
+    collection = db["runningwarehouse"]
 
-    # Get page links
-    page_links = getLinks("https://www.roadtrailrun.com/p/blog-page.html")
+    # List of links to scrape
+    base_links = [
+        # Mens
+        "https://www.runningwarehouse.com/Mens_Neutral_Road_Running_Shoes/catpage-MNROAD.html",
+        "https://www.runningwarehouse.com/Mens_Stability_Road_Running_Shoes/catpage-MSROAD.html",
+        "https://www.runningwarehouse.com/Mens_Road_Racing_Shoes__Flats/catpage-MRAC.html",
+        "https://www.runningwarehouse.com/trailshoesmen.html",
+        # Womens
+        "https://www.runningwarehouse.com/Womens_Neutral_Road_Running_Shoes/catpage-WNROAD.html",
+        "https://www.runningwarehouse.com/Womens_Stability_Road_Running_Shoes/catpage-WSROAD.html",
+        "https://www.runningwarehouse.com/Womens_Road_Racing_Shoes__Flats/catpage-WRAC.html",
+        "https://www.runningwarehouse.com/trailshoeswomen.html"
+    ]
 
-    # Remove any duplicates
-    page_links = list(set(page_links))
-
-    # Iterate over page links and upload to MongoDB
-    for link in page_links:
-        print(f"Loading data for {link}")
+    # Iterate over base links to get shoe links
+    shoe_links = []
+    for link in base_links:
         try:
-            temp_obj = getPageObj(link)
+            temp_links = getLinks(link)
+            shoe_links = shoe_links + temp_links
+        except:
+            print(f"Error getting data for {link}")
+
+    # Remove any duplicate links
+    shoe_links = list(set(shoe_links))
+
+    # Iterate over links and push data to Mongo
+    for s in shoe_links:
+        try:
+            print(f"Uploading data for {s}")
+            temp_obj = getShoeReviews(s)
             collection.insert_one(temp_obj)
         except:
-            print(f"Error getting data for: {link}")
-
+            print(f"Error getting data for {s}")
 
 if __name__ == "__main__":
     main()

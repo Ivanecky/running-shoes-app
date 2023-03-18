@@ -44,13 +44,13 @@ def getPageObj(url):
     # Get body text (three parts)
     # Get verdict
     try:
-        body_txt_verdict = shoe_soup.select('col-lg-11')[0].text.replace('\n', '').strip()
+        body_txt_verdict = shoe_soup.find("div", {"class": "big"}).text.replace('\n', '').strip()
     except:
         print(f"No verdict was found for {url}")
         body_txt_verdict = ""
     # Get main review
     try:
-        body_txt_main = shoe_soup.find("div", {"class": "review-section"}).text.replace('\n', '').strip()
+        body_txt_main = shoe_soup.find("div", {"class": "review-sections"}).text.replace('\n', '').strip()
     except:
         try:
             body_txt_main = shoe_soup.find("div", {"id": "review-body-content"}.text.replace('\n', '').strip())
